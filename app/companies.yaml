@@ -1,0 +1,24 @@
+# JobSeek target company list.
+#
+# These are the companies JobSeek sweeps every cycle. Each entry is the
+# company's "slug" on that Applicant Tracking System (the name in its careers
+# URL). Add or remove freely — this is YOUR curated list.
+#
+# How to find a slug:
+#   Greenhouse -> boards.greenhouse.io/<slug>        (use <slug> below)
+#   Lever      -> jobs.lever.co/<slug>               (use <slug> below)
+#
+# The ones below are examples to get you running. Verify each opens a real
+# board, then replace with the employers your candidates actually target.
+# Any slug that fails is skipped automatically, so a wrong one won't break a sweep.
+
+greenhouse:
+  - gitlab
+  - discord
+  - figma
+  - anthropic
+  - duolingo
+
+lever:
+  - ramp
+  - mistral

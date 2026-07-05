@@ -1,0 +1,7 @@
+﻿__pycache__/
+*.pyc
+venv/
+.env
+jobseek.db
+app/db/settings.py
+test_auth.py
