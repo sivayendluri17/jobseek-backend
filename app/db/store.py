@@ -122,6 +122,36 @@ def query_jobs(
         return [_row_to_job(r) for r in cur.fetchall()]
 
 
+
+def suggest_jobs(q: str, limit: int = 8) -> list[dict]:
+    """Fast type-ahead suggestions. Ranks prefix matches on the title first,
+    then mid-word title matches, then company matches; freshest first inside
+    each rank."""
+    term = q.strip()
+    if not term:
+        return []
+    prefix = f"{term}%"
+    anywhere = f"%{term}%"
+    sql = """
+        SELECT id, title, company, freshness_bucket,
+               CASE
+                   WHEN title ILIKE %s THEN 0
+                   WHEN title ILIKE %s THEN 1
+                   ELSE 2
+               END AS rank
+        FROM jobs
+        WHERE title ILIKE %s OR company ILIKE %s
+        ORDER BY rank, posted_at DESC
+        LIMIT %s
+    """
+    with _connect() as conn, conn.cursor() as cur:
+        cur.execute(sql, (prefix, anywhere, anywhere, anywhere, limit))
+        return [
+            {"id": r[0], "title": r[1], "company": r[2], "freshness_bucket": r[3]}
+            for r in cur.fetchall()
+        ]
+
+
 def get_job(job_id: str) -> Job | None:
     with _connect() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("SELECT * FROM jobs WHERE id = %s", (job_id,))

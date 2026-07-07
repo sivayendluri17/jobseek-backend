@@ -31,6 +31,13 @@ def list_jobs(
     )
 
 
+@router.get("/jobs/suggest")
+def suggest(q: str = Query(..., min_length=1, max_length=80),
+            limit: int = Query(8, ge=1, le=15)) -> list[dict]:
+    """Type-ahead suggestions for the search box."""
+    return store.suggest_jobs(q, limit)
+
+
 @router.get("/jobs/{job_id}", response_model=Job)
 def get_job(job_id: str) -> Job:
     job = store.get_job(job_id)
