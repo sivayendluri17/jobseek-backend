@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api.jobs import router as jobs_router
 from .api.user_data import router as me_router
 from .api.gmail import router as gmail_router, callback_router as gmail_callback_router
+from .api.chitti import router as chitti_router
 from .auth.routes import router as auth_router
 from .db import store, user_store, gmail_store
 
@@ -29,6 +30,7 @@ app.include_router(auth_router)
 app.include_router(me_router)
 app.include_router(gmail_router)
 app.include_router(gmail_callback_router)
+app.include_router(chitti_router)
 
 
 @app.on_event("startup")
