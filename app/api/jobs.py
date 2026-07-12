@@ -24,11 +24,27 @@ def list_jobs(
     remote: bool | None = None,
     company: str | None = None,
     search: str | None = None,
+    category: str | None = None,
     limit: int = Query(100, ge=1, le=500),
 ) -> list[Job]:
     return store.query_jobs(
-        freshness=freshness, remote=remote, company=company, search=search, limit=limit
+        freshness=freshness, remote=remote, company=company,
+        search=search, category=category, limit=limit,
     )
+
+
+@router.get("/jobs/categories")
+def job_categories() -> list[dict]:
+    """Tech categories with live counts, for the filter chips."""
+    from ..models.categories import CATEGORY_LABELS
+    counts = store.counts_by_category()
+    order = ["swe", "backend", "frontend", "fullstack", "mobile", "data-ml",
+             "cloud-devops", "security", "qa", "systems", "product-ba",
+             "leadership", "intern"]
+    return [
+        {"key": k, "label": CATEGORY_LABELS[k], "count": counts.get(k, 0)}
+        for k in order if counts.get(k, 0) > 0
+    ]
 
 
 @router.get("/jobs/suggest")

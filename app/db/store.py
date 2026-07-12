@@ -13,6 +13,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor, execute_values
 
 from ..models.job import FreshnessBucket, Job
+from ..models.categories import categorize
 from . import settings
 
 SCHEMA = """
@@ -94,15 +95,25 @@ def query_jobs(
     remote: bool | None = None,
     company: str | None = None,
     search: str | None = None,
+    category: str | None = None,
     limit: int = 100,
 ) -> list[Job]:
     sql = "SELECT * FROM jobs WHERE 1=1"
     params: list = []
     if search:
-        # keyword match on title OR company, case-insensitive
-        sql += " AND (title ILIKE %s OR company ILIKE %s)"
-        like = f"%{search}%"
-        params += [like, like]
+        # Tokenized keyword search: every word in the query must appear
+        # somewhere in the title, company, location, or department
+        # (case-insensitive, any order). "java developer" matches
+        # "Backend Developer — Java"; "engineer figma" matches Figma
+        # engineering roles.
+        for word in search.split()[:6]:  # cap tokens to keep queries sane
+            like = f"%{word}%"
+            sql += (
+                " AND (title ILIKE %s OR company ILIKE %s"
+                " OR COALESCE(location,'') ILIKE %s"
+                " OR COALESCE(department,'') ILIKE %s)"
+            )
+            params += [like, like, like, like]
     if freshness:
         order = {"24h": ["24h"], "48h": ["24h", "48h"],
                  "72h": ["24h", "48h", "72h"]}.get(freshness)
@@ -116,10 +127,23 @@ def query_jobs(
         sql += " AND company = %s"
         params.append(company)
     sql += " ORDER BY posted_at DESC LIMIT %s"
-    params.append(limit)
+    # Fetch wide, then apply the tech-role classifier in Python (hides
+    # non-tech roles and applies the category filter), then trim to limit.
+    params.append(max(limit * 4, 800))
     with _connect() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(sql, params)
-        return [_row_to_job(r) for r in cur.fetchall()]
+        rows = cur.fetchall()
+    out: list[Job] = []
+    for r in rows:
+        cat = categorize(r["title"])
+        if cat is None:
+            continue                     # non-tech role -> hidden
+        if category and cat != category:
+            continue
+        out.append(_row_to_job(r))
+        if len(out) >= limit:
+            break
+    return out
 
 
 
@@ -163,3 +187,16 @@ def counts_by_bucket() -> dict[str, int]:
     with _connect() as conn, conn.cursor() as cur:
         cur.execute("SELECT freshness_bucket, COUNT(*) FROM jobs GROUP BY freshness_bucket")
         return {bucket: count for bucket, count in cur.fetchall()}
+
+
+def counts_by_category() -> dict[str, int]:
+    """Live counts per tech category (for the UI filter chips)."""
+    with _connect() as conn, conn.cursor() as cur:
+        cur.execute("SELECT title FROM jobs")
+        titles = [r[0] for r in cur.fetchall()]
+    counts: dict[str, int] = {}
+    for t in titles:
+        cat = categorize(t)
+        if cat:
+            counts[cat] = counts.get(cat, 0) + 1
+    return counts
