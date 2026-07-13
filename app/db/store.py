@@ -189,10 +189,24 @@ def counts_by_bucket() -> dict[str, int]:
         return {bucket: count for bucket, count in cur.fetchall()}
 
 
-def counts_by_category() -> dict[str, int]:
-    """Live counts per tech category (for the UI filter chips)."""
+def counts_by_category(freshness: str | None = None,
+                       remote: bool | None = None) -> dict[str, int]:
+    """Live counts per tech category, respecting the active freshness and
+    remote filters — so the chips never promise jobs a filter combination
+    can't deliver."""
+    sql = "SELECT title FROM jobs WHERE 1=1"
+    params: list = []
+    if freshness:
+        order = {"24h": ["24h"], "48h": ["24h", "48h"],
+                 "72h": ["24h", "48h", "72h"]}.get(freshness)
+        if order:
+            sql += " AND freshness_bucket IN (" + ",".join(["%s"] * len(order)) + ")"
+            params += order
+    if remote is not None:
+        sql += " AND remote = %s"
+        params.append(remote)
     with _connect() as conn, conn.cursor() as cur:
-        cur.execute("SELECT title FROM jobs")
+        cur.execute(sql, params)
         titles = [r[0] for r in cur.fetchall()]
     counts: dict[str, int] = {}
     for t in titles:

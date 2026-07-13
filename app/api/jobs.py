@@ -34,16 +34,19 @@ def list_jobs(
 
 
 @router.get("/jobs/categories")
-def job_categories() -> list[dict]:
-    """Tech categories with live counts, for the filter chips."""
+def job_categories(
+    freshness: Literal["24h", "48h", "72h"] | None = None,
+    remote: bool | None = None,
+) -> list[dict]:
+    """Tech categories with live counts under the active filters."""
     from ..models.categories import CATEGORY_LABELS
-    counts = store.counts_by_category()
+    counts = store.counts_by_category(freshness=freshness, remote=remote)
     order = ["swe", "backend", "frontend", "fullstack", "mobile", "data-ml",
              "cloud-devops", "security", "qa", "systems", "product-ba",
              "leadership", "intern"]
     return [
         {"key": k, "label": CATEGORY_LABELS[k], "count": counts.get(k, 0)}
-        for k in order if counts.get(k, 0) > 0
+        for k in order
     ]
 
 
