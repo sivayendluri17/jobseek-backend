@@ -74,7 +74,10 @@ class JSearchAdapter(Adapter):
 
     def parse(self, query: str, payload) -> list[RawJob]:
         jobs: list[RawJob] = []
-        for j in payload.get("data", []) or []:
+        # v2 nests the list under data.jobs; older shape had data as the list.
+        data = payload.get("data", {})
+        items = data.get("jobs", []) if isinstance(data, dict) else (data or [])
+        for j in items:
             title = j.get("job_title", "") or ""
             company = j.get("employer_name", "") or "Unknown"
             city = j.get("job_city") or ""
