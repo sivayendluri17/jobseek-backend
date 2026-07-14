@@ -16,15 +16,16 @@ from ..db import store
 from ..models.job import Job
 from .adapters.greenhouse import GreenhouseAdapter
 from .adapters.lever import LeverAdapter
+from .adapters.jsearch import JSearchAdapter
 from .base import RawJob
 from .bucketer import bucket_all
 from .deduper import dedupe
 from .normalizer import normalize_all
-from .filters import filter_us
 
 ADAPTERS = {
     "greenhouse": GreenhouseAdapter(),
     "lever": LeverAdapter(),
+    "jsearch": JSearchAdapter(),
 }
 
 
@@ -51,7 +52,6 @@ async def run_sweep() -> dict:
 
     raws = await _fetch_all(companies)
     jobs: list[Job] = normalize_all(raws)
-    jobs = filter_us(jobs)
     jobs = dedupe(jobs)
     jobs = bucket_all(jobs)
     written = store.upsert_jobs(jobs)

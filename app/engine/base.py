@@ -25,6 +25,8 @@ class RawJob:
     posted_at: datetime
     location: str | None = None
     department: str | None = None
+    raw_employment: str | None = None   # aggregator's own type hint
+    description: str | None = None       # for C2C/W2 text parsing
 
 
 class Adapter(ABC):

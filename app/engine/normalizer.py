@@ -5,6 +5,7 @@ import hashlib
 
 from ..models.job import Job
 from .base import RawJob
+from .employment import detect_employment_type
 
 REMOTE_HINTS = ("remote", "anywhere", "distributed", "work from home")
 
@@ -21,6 +22,9 @@ def _is_remote(raw: RawJob) -> bool:
 
 
 def normalize(raw: RawJob) -> Job:
+    emp = detect_employment_type(
+        f"{raw.title} {raw.description or ''}", raw.raw_employment
+    )
     return Job(
         id=_stable_id(raw),
         source=raw.source,
@@ -31,6 +35,7 @@ def normalize(raw: RawJob) -> Job:
         url=raw.url,
         posted_at=raw.posted_at,
         department=raw.department,
+        employment_type=emp,
     )
 
 

@@ -16,11 +16,20 @@ class FreshnessBucket(str, enum.Enum):
     OLDER = "older"
 
 
+class EmploymentType(str, enum.Enum):
+    """How the role is engaged — the consultancy's primary lens."""
+
+    FULLTIME = "fulltime"   # W2 permanent / direct-hire
+    C2C = "c2c"             # Corp-to-Corp contract
+    W2_CONTRACT = "w2"      # W2 contract (contract but not corp-to-corp)
+    CONTRACT = "contract"   # contract, C2C-vs-W2 unspecified in the posting
+
+
 class Job(BaseModel):
     """A normalized job listing, ready to store and serve."""
 
-    id: str
-    source: str
+    id: str                       # stable hash — same role never stored twice
+    source: str                   # "greenhouse", "lever", "jsearch", ...
     company: str
     title: str
     location: str | None = None
@@ -29,3 +38,4 @@ class Job(BaseModel):
     posted_at: datetime
     freshness_bucket: FreshnessBucket = FreshnessBucket.OLDER
     department: str | None = None
+    employment_type: EmploymentType = EmploymentType.FULLTIME

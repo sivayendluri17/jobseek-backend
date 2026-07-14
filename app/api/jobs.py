@@ -25,22 +25,32 @@ def list_jobs(
     company: str | None = None,
     search: str | None = None,
     category: str | None = None,
+    employment: str | None = None,
     limit: int = Query(100, ge=1, le=500),
 ) -> list[Job]:
     return store.query_jobs(
         freshness=freshness, remote=remote, company=company,
-        search=search, category=category, limit=limit,
+        search=search, category=category, employment=employment, limit=limit,
     )
+
+
+@router.get("/jobs/employment-counts")
+def employment_counts() -> dict:
+    """Counts per employment type, for the top tabs."""
+    return store.counts_by_employment()
 
 
 @router.get("/jobs/categories")
 def job_categories(
     freshness: Literal["24h", "48h", "72h"] | None = None,
     remote: bool | None = None,
+    employment: str | None = None,
 ) -> list[dict]:
     """Tech categories with live counts under the active filters."""
     from ..models.categories import CATEGORY_LABELS
-    counts = store.counts_by_category(freshness=freshness, remote=remote)
+    counts = store.counts_by_category(
+        freshness=freshness, remote=remote, employment=employment
+    )
     order = ["swe", "backend", "frontend", "fullstack", "mobile", "data-ml",
              "cloud-devops", "security", "qa", "systems", "product-ba",
              "leadership", "intern"]

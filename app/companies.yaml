@@ -22,3 +22,51 @@ greenhouse:
 lever:
   - ramp
   - mistral
+
+jsearch:
+  # General software engineering
+  - "software engineer contract"
+  - "software developer c2c"
+  - "senior software engineer contract"
+  # Backend / languages
+  - "java developer contract"
+  - "python developer contract"
+  - ".net developer contract"
+  - "golang developer contract"
+  - "node js developer contract"
+  # Frontend / full stack / mobile
+  - "frontend developer contract"
+  - "react developer contract"
+  - "full stack developer c2c"
+  - "ios developer contract"
+  - "android developer contract"
+  # Data / ML / AI
+  - "data engineer contract"
+  - "data scientist contract"
+  - "machine learning engineer contract"
+  - "data analyst contract"
+  - "business intelligence contract"
+  # Cloud / DevOps / infra
+  - "devops engineer contract"
+  - "cloud engineer contract"
+  - "aws engineer contract"
+  - "site reliability engineer contract"
+  - "platform engineer contract"
+  # Security
+  - "security engineer contract"
+  - "cybersecurity contract"
+  # QA / systems / database
+  - "qa engineer contract"
+  - "automation test engineer contract"
+  - "database administrator contract"
+  # Product / BA / analysts
+  - "business analyst contract"
+  - "business systems analyst contract"
+  - "systems analyst contract"
+  - "product manager contract"
+  - "scrum master contract"
+  - "program manager contract"
+  # Leadership / architecture
+  - "solutions architect contract"
+  - "technical lead contract"
+  - "engineering manager contract"

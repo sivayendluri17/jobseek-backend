@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 import psycopg2
 from psycopg2.extras import RealDictCursor, execute_values
 
-from ..models.job import FreshnessBucket, Job
+from ..models.job import FreshnessBucket, Job, EmploymentType
 from ..models.categories import categorize
 from . import settings
 
@@ -28,11 +28,13 @@ CREATE TABLE IF NOT EXISTS jobs (
     posted_at        TIMESTAMPTZ,
     freshness_bucket TEXT,
     department       TEXT,
+    employment_type  TEXT DEFAULT 'fulltime',
     first_seen       TIMESTAMPTZ,
     last_seen        TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_bucket ON jobs (freshness_bucket);
 CREATE INDEX IF NOT EXISTS idx_posted ON jobs (posted_at);
+CREATE INDEX IF NOT EXISTS idx_employment ON jobs (employment_type);
 """
 
 
@@ -51,6 +53,11 @@ def _connect():
 def init_db() -> None:
     with _connect() as conn, conn.cursor() as cur:
         cur.execute(SCHEMA)
+        # migrate older tables that predate employment_type
+        cur.execute(
+            "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS "
+            "employment_type TEXT DEFAULT 'fulltime'"
+        )
     # 'with conn' commits on success
 
 
@@ -61,18 +68,21 @@ def upsert_jobs(jobs: list[Job]) -> int:
     rows = [
         (
             j.id, j.source, j.company, j.title, j.location, bool(j.remote), j.url,
-            j.posted_at, j.freshness_bucket.value, j.department, now, now,
+            j.posted_at, j.freshness_bucket.value, j.department,
+            j.employment_type.value, now, now,
         )
         for j in jobs
     ]
     sql = """
         INSERT INTO jobs (id, source, company, title, location, remote, url,
-                          posted_at, freshness_bucket, department, first_seen, last_seen)
+                          posted_at, freshness_bucket, department, employment_type,
+                          first_seen, last_seen)
         VALUES %s
         ON CONFLICT (id) DO UPDATE SET
             freshness_bucket = EXCLUDED.freshness_bucket,
             posted_at        = EXCLUDED.posted_at,
             url              = EXCLUDED.url,
+            employment_type  = EXCLUDED.employment_type,
             last_seen        = EXCLUDED.last_seen
     """
     with _connect() as conn, conn.cursor() as cur:
@@ -87,6 +97,7 @@ def _row_to_job(row: dict) -> Job:
         posted_at=row["posted_at"],
         freshness_bucket=FreshnessBucket(row["freshness_bucket"]),
         department=row["department"],
+        employment_type=EmploymentType(row.get("employment_type") or "fulltime"),
     )
 
 
@@ -96,6 +107,7 @@ def query_jobs(
     company: str | None = None,
     search: str | None = None,
     category: str | None = None,
+    employment: str | None = None,
     limit: int = 100,
 ) -> list[Job]:
     sql = "SELECT * FROM jobs WHERE 1=1"
@@ -123,6 +135,13 @@ def query_jobs(
     if remote is not None:
         sql += " AND remote = %s"
         params.append(remote)
+    if employment:
+        # "contract" tab shows all non-fulltime; specific tabs match exactly
+        if employment == "contract-any":
+            sql += " AND employment_type IN ('c2c','w2','contract')"
+        else:
+            sql += " AND employment_type = %s"
+            params.append(employment)
     if company:
         sql += " AND company = %s"
         params.append(company)
@@ -189,8 +208,21 @@ def counts_by_bucket() -> dict[str, int]:
         return {bucket: count for bucket, count in cur.fetchall()}
 
 
+def counts_by_employment() -> dict[str, int]:
+    """Total visible (tech-classified) counts per employment type."""
+    with _connect() as conn, conn.cursor() as cur:
+        cur.execute("SELECT title, COALESCE(employment_type,'fulltime') FROM jobs")
+        rows = cur.fetchall()
+    counts = {"fulltime": 0, "c2c": 0, "w2": 0, "contract": 0}
+    for title, emp in rows:
+        if categorize(title) is not None:
+            counts[emp] = counts.get(emp, 0) + 1
+    return counts
+
+
 def counts_by_category(freshness: str | None = None,
-                       remote: bool | None = None) -> dict[str, int]:
+                       remote: bool | None = None,
+                       employment: str | None = None) -> dict[str, int]:
     """Live counts per tech category, respecting the active freshness and
     remote filters — so the chips never promise jobs a filter combination
     can't deliver."""
@@ -205,6 +237,12 @@ def counts_by_category(freshness: str | None = None,
     if remote is not None:
         sql += " AND remote = %s"
         params.append(remote)
+    if employment:
+        if employment == "contract-any":
+            sql += " AND employment_type IN ('c2c','w2','contract')"
+        else:
+            sql += " AND employment_type = %s"
+            params.append(employment)
     with _connect() as conn, conn.cursor() as cur:
         cur.execute(sql, params)
         titles = [r[0] for r in cur.fetchall()]
