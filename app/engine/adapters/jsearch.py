@@ -45,11 +45,11 @@ class JSearchAdapter(Adapter):
     source = "jsearch"
 
     def url_for(self, query: str) -> str:
-        # date_posted=week keeps results fresh; num_pages=1 conserves quota.
+        # JSearch v5 uses /search-v2. Keep params minimal for quota safety.
         from urllib.parse import quote
         return (
-            f"https://{RAPIDAPI_HOST}/search?query={quote(query)}"
-            f"&page=1&num_pages=1&date_posted=week&country=us"
+            f"https://{RAPIDAPI_HOST}/search-v2?query={quote(query)}"
+            f"&page=1&date_posted=month&country=us"
         )
 
     async def fetch(self, client: httpx.AsyncClient, query: str) -> list[RawJob]:
