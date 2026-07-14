@@ -56,3 +56,19 @@ def get_current_user(
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
     return user
+
+
+def get_optional_user(
+    cred: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> dict | None:
+    """Like get_current_user but returns None instead of raising when there's
+    no valid token — for endpoints that work logged-out but personalize when
+    logged in."""
+    if cred is None:
+        return None
+    try:
+        payload = jwt.decode(cred.credentials, JWT_SECRET, algorithms=[JWT_ALG])
+        user_id = int(payload["sub"])
+    except Exception:
+        return None
+    return user_store.get_user_by_id(user_id)

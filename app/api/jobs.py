@@ -6,9 +6,11 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 
 from ..config import load_companies
-from ..db import store
+from ..db import store, resume_store
 from ..engine.runner import run_sweep
 from ..models.job import Job
+from ..auth.security import get_optional_user
+from fastapi import Depends
 
 router = APIRouter()
 
@@ -27,11 +29,22 @@ def list_jobs(
     category: str | None = None,
     employment: str | None = None,
     limit: int = Query(100, ge=1, le=500),
+    user: dict | None = Depends(get_optional_user),
 ) -> list[Job]:
-    return store.query_jobs(
+    jobs = store.query_jobs(
         freshness=freshness, remote=remote, company=company,
         search=search, category=category, employment=employment, limit=limit,
     )
+    # Personalized match scores: only when the user is logged in AND has a
+    # resume. Otherwise match_score stays None and the UI shows no badge.
+    if user:
+        kw = resume_store.resume_keywords(user["id"])
+        if kw:
+            for j in jobs:
+                j.match_score = resume_store.match_score(
+                    kw, j.title, j.department or ""
+                )
+    return jobs
 
 
 @router.get("/jobs/employment-counts")

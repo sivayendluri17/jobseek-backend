@@ -34,7 +34,6 @@ CREATE TABLE IF NOT EXISTS jobs (
 );
 CREATE INDEX IF NOT EXISTS idx_bucket ON jobs (freshness_bucket);
 CREATE INDEX IF NOT EXISTS idx_posted ON jobs (posted_at);
-CREATE INDEX IF NOT EXISTS idx_employment ON jobs (employment_type);
 """
 
 
@@ -57,6 +56,11 @@ def init_db() -> None:
         cur.execute(
             "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS "
             "employment_type TEXT DEFAULT 'fulltime'"
+        )
+        # Index created here — AFTER the column is guaranteed to exist.
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_employment "
+            "ON jobs (employment_type)"
         )
     # 'with conn' commits on success
 

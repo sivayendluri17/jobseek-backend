@@ -39,3 +39,4 @@ class Job(BaseModel):
     freshness_bucket: FreshnessBucket = FreshnessBucket.OLDER
     department: str | None = None
     employment_type: EmploymentType = EmploymentType.FULLTIME
+    match_score: int | None = None   # resume-based; None when no resume

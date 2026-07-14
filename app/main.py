@@ -12,8 +12,9 @@ from .api.jobs import router as jobs_router
 from .api.user_data import router as me_router
 from .api.gmail import router as gmail_router, callback_router as gmail_callback_router
 from .api.chitti import router as chitti_router
+from .api.resume import router as resume_router
 from .auth.routes import router as auth_router
-from .db import store, user_store, gmail_store
+from .db import store, user_store, gmail_store, resume_store
 
 app = FastAPI(title="JobSeek API", version="0.3.0")
 
@@ -31,6 +32,7 @@ app.include_router(me_router)
 app.include_router(gmail_router)
 app.include_router(gmail_callback_router)
 app.include_router(chitti_router)
+app.include_router(resume_router)
 
 
 @app.on_event("startup")
@@ -38,3 +40,4 @@ def _startup() -> None:
     store.init_db()
     user_store.init_db()
     gmail_store.init_db()
+    resume_store.init_db()
